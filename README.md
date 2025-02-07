@@ -51,4 +51,5 @@ Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" `
     Export-Csv -Path "C:\logs\sysmon_cmd_events.csv" -NoTypeInformation
 
 Get-WinEvent -FilterHashTable @{ LogName = "Microsoft-Windows-Sysmon/Operational" }
+Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -FilterHashTable @{LogName='Microsoft-Windows-Sysmon/Operational';StartTime=(Get-Date).AddSeconds(-3600);EndTime=(Get-Date)} | Export-Csv -Path "C:\logs\sysmon_last1h.csv" -NoTypeInformation
 ```
