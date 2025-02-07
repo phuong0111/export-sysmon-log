@@ -19,12 +19,10 @@ class DateTimeSelector(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         
-        # Date entry (YYYY-MM-DD)
         self.date_var = tk.StringVar(value=datetime.now().strftime('%Y-%m-%d'))
         self.date_entry = ttk.Entry(self, textvariable=self.date_var, width=12)
         self.date_entry.grid(row=0, column=0, padx=2)
         
-        # Time entry (HH:MM:SS)
         self.time_var = tk.StringVar(value=datetime.now().strftime('%H:%M:%S'))
         self.time_entry = ttk.Entry(self, textvariable=self.time_var, width=10)
         self.time_entry.grid(row=0, column=1, padx=2)
@@ -46,11 +44,9 @@ class SysmonLogGUI:
         self.root.title("Sysmon Log Retriever (Admin)")
         self.root.geometry("700x500")
         
-        # Create main frame
         main_frame = ttk.Frame(root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Add admin indicator
         admin_label = ttk.Label(main_frame, text="Running as Administrator", foreground="green")
         admin_label.grid(row=0, column=0, columnspan=4, sticky=tk.W, pady=5)
         
@@ -58,17 +54,14 @@ class SysmonLogGUI:
         time_frame = ttk.LabelFrame(main_frame, text="Time Range", padding="5")
         time_frame.grid(row=1, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
         
-        # Start time
         ttk.Label(time_frame, text="Start Time:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
         self.start_time = DateTimeSelector(time_frame)
         self.start_time.grid(row=0, column=1, sticky=tk.W, pady=5, padx=5)
         
-        # End time
         ttk.Label(time_frame, text="End Time:").grid(row=0, column=2, sticky=tk.W, pady=5, padx=5)
         self.end_time = DateTimeSelector(time_frame)
         self.end_time.grid(row=0, column=3, sticky=tk.W, pady=5, padx=5)
 
-        # Format hint
         hint_text = "Format: YYYY-MM-DD HH:MM:SS"
         ttk.Label(time_frame, text=hint_text, font=('', 8)).grid(
             row=1, column=0, columnspan=4, sticky=tk.W, padx=5)
@@ -90,7 +83,7 @@ class SysmonLogGUI:
                       command=lambda s=seconds: self.set_quick_time(s)).grid(
                           row=0, column=i, padx=5)
         
-        # Output path selection
+        # Output settings
         path_frame = ttk.LabelFrame(main_frame, text="Output Settings", padding="5")
         path_frame.grid(row=2, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
         
@@ -102,23 +95,29 @@ class SysmonLogGUI:
         
         browse_btn = ttk.Button(path_frame, text="Browse", command=self.browse_path)
         browse_btn.grid(row=0, column=3, sticky=tk.W, pady=5, padx=5)
+
+        # Filename input
+        ttk.Label(path_frame, text="Filename:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        default_filename = f"sysmon_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        self.filename_var = tk.StringVar(value=default_filename)
+        filename_entry = ttk.Entry(path_frame, textvariable=self.filename_var, width=50)
+        filename_entry.grid(row=1, column=1, columnspan=2, sticky=tk.W, pady=5)
         
         # PowerShell execution policy option
         self.bypass_policy = tk.BooleanVar(value=True)
         policy_check = ttk.Checkbutton(path_frame, text="Bypass ExecutionPolicy", 
                                      variable=self.bypass_policy)
-        policy_check.grid(row=1, column=1, sticky=tk.W, pady=5)
+        policy_check.grid(row=2, column=1, sticky=tk.W, pady=5)
         
         # Fetch button
         fetch_btn = ttk.Button(main_frame, text="Fetch Logs", command=self.fetch_logs)
         fetch_btn.grid(row=3, column=0, columnspan=4, pady=20)
         
-        # Status label
+        # Status and progress
         self.status_var = tk.StringVar()
         status_label = ttk.Label(main_frame, textvariable=self.status_var, wraplength=600)
         status_label.grid(row=4, column=0, columnspan=4, sticky=tk.W, pady=5)
         
-        # Progress bar
         self.progress = ttk.Progressbar(main_frame, length=600, mode='indeterminate')
         self.progress.grid(row=5, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
 
@@ -154,12 +153,8 @@ class SysmonLogGUI:
         start_time = self.start_time.get_datetime().strftime('%Y-%m-%dT%H:%M:%S')
         end_time = self.end_time.get_datetime().strftime('%Y-%m-%dT%H:%M:%S')
         
-        output_file = os.path.join(
-            self.output_path.get(), 
-            f"sysmon_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        )
+        output_file = os.path.join(self.output_path.get(), self.filename_var.get())
 
-        # Construct PowerShell command
         ps_command = (
             f'Get-WinEvent '
             f'-FilterHashTable @{{LogName="Microsoft-Windows-Sysmon/Operational";'
@@ -172,13 +167,11 @@ class SysmonLogGUI:
         self.root.update()
 
         try:
-            # Prepare PowerShell command with execution policy bypass if selected
             powershell_args = ["powershell"]
             if self.bypass_policy.get():
                 powershell_args.extend(["-ExecutionPolicy", "Bypass"])
             powershell_args.extend(["-Command", ps_command])
 
-            # Execute PowerShell command
             process = subprocess.run(
                 powershell_args,
                 capture_output=True,
