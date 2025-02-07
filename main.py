@@ -103,9 +103,9 @@ class SysmonLogGUI:
         # Construct PowerShell command
         ps_command = (
             f'Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" '
-            f'-FilterHashTable @{{LogName="Microsoft-Windows-Sysmon/Operational";'
-            f'StartTime=(Get-Date).AddSeconds(-{seconds});'
-            f'EndTime=(Get-Date)}} | Export-Csv -Path "{output_file}" -NoTypeInformation'
+            f'-FilterHashTable @{{ LogName = "Microsoft-Windows-Sysmon/Operational";'
+            f'StartTime = (Get-Date).AddSeconds(-{seconds});'
+            f'EndTime = (Get-Date) }} | Export-Csv -Path "{output_file}" -NoTypeInformation'
         )
 
         self.status_var.set("Fetching logs...")
