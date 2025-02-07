@@ -161,7 +161,7 @@ class SysmonLogGUI:
 
         # Construct PowerShell command
         ps_command = (
-            f'Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" '
+            f'Get-WinEvent '
             f'-FilterHashTable @{{LogName="Microsoft-Windows-Sysmon/Operational";'
             f'StartTime="{start_time}";'
             f'EndTime="{end_time}"}} | Export-Csv -Path "{output_file}" -NoTypeInformation'
