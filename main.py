@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from tkcalendar import DateTimeEntry
 import subprocess
 from datetime import datetime
 import os
@@ -19,7 +20,7 @@ class SysmonLogGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Sysmon Log Retriever (Admin)")
-        self.root.geometry("600x400")
+        self.root.geometry("700x500")
         
         # Create main frame
         main_frame = ttk.Frame(root, padding="10")
@@ -29,72 +30,84 @@ class SysmonLogGUI:
         admin_label = ttk.Label(main_frame, text="Running as Administrator", foreground="green")
         admin_label.grid(row=0, column=0, columnspan=4, sticky=tk.W, pady=5)
         
-        # Time range selection
-        ttk.Label(main_frame, text="Time Range:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        # Time selection frame
+        time_frame = ttk.LabelFrame(main_frame, text="Time Range", padding="5")
+        time_frame.grid(row=1, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
         
-        self.time_value = tk.StringVar(value="3600")
-        self.time_entry = ttk.Entry(main_frame, textvariable=self.time_value, width=10)
-        self.time_entry.grid(row=1, column=1, sticky=tk.W, pady=5)
+        # Start time
+        ttk.Label(time_frame, text="Start Time:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
+        self.start_time = DateTimeEntry(time_frame, width=25)
+        self.start_time.grid(row=0, column=1, sticky=tk.W, pady=5, padx=5)
         
-        self.time_unit = tk.StringVar(value="seconds")
-        time_unit_combo = ttk.Combobox(main_frame, textvariable=self.time_unit, 
-                                     values=["seconds", "minutes", "hours"], 
-                                     width=8, state="readonly")
-        time_unit_combo.grid(row=1, column=2, sticky=tk.W, pady=5, padx=5)
+        # End time
+        ttk.Label(time_frame, text="End Time:").grid(row=0, column=2, sticky=tk.W, pady=5, padx=5)
+        self.end_time = DateTimeEntry(time_frame, width=25)
+        self.end_time.grid(row=0, column=3, sticky=tk.W, pady=5, padx=5)
+        
+        # Quick time buttons
+        quick_frame = ttk.Frame(time_frame)
+        quick_frame.grid(row=1, column=0, columnspan=4, pady=5)
+        
+        quick_times = [
+            ("Last Hour", 3600),
+            ("Last 6 Hours", 21600),
+            ("Last 12 Hours", 43200),
+            ("Last 24 Hours", 86400),
+            ("Last 7 Days", 604800)
+        ]
+        
+        for i, (text, seconds) in enumerate(quick_times):
+            ttk.Button(quick_frame, text=text, 
+                      command=lambda s=seconds: self.set_quick_time(s)).grid(
+                          row=0, column=i, padx=5)
         
         # Output path selection
-        ttk.Label(main_frame, text="Output Path:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        path_frame = ttk.LabelFrame(main_frame, text="Output Settings", padding="5")
+        path_frame.grid(row=2, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
+        
+        ttk.Label(path_frame, text="Output Path:").grid(row=0, column=0, sticky=tk.W, pady=5)
         
         self.output_path = tk.StringVar(value=os.path.join(os.path.expanduser("~"), "Desktop"))
-        path_entry = ttk.Entry(main_frame, textvariable=self.output_path, width=50)
-        path_entry.grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=5)
+        path_entry = ttk.Entry(path_frame, textvariable=self.output_path, width=50)
+        path_entry.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=5)
         
-        browse_btn = ttk.Button(main_frame, text="Browse", command=self.browse_path)
-        browse_btn.grid(row=2, column=3, sticky=tk.W, pady=5, padx=5)
+        browse_btn = ttk.Button(path_frame, text="Browse", command=self.browse_path)
+        browse_btn.grid(row=0, column=3, sticky=tk.W, pady=5, padx=5)
         
         # PowerShell execution policy option
         self.bypass_policy = tk.BooleanVar(value=True)
-        policy_check = ttk.Checkbutton(main_frame, text="Bypass ExecutionPolicy", 
+        policy_check = ttk.Checkbutton(path_frame, text="Bypass ExecutionPolicy", 
                                      variable=self.bypass_policy)
-        policy_check.grid(row=3, column=1, columnspan=2, sticky=tk.W, pady=5)
+        policy_check.grid(row=1, column=1, sticky=tk.W, pady=5)
         
         # Fetch button
         fetch_btn = ttk.Button(main_frame, text="Fetch Logs", command=self.fetch_logs)
-        fetch_btn.grid(row=4, column=1, sticky=tk.W, pady=20)
+        fetch_btn.grid(row=3, column=0, columnspan=4, pady=20)
         
         # Status label
         self.status_var = tk.StringVar()
-        status_label = ttk.Label(main_frame, textvariable=self.status_var, wraplength=500)
-        status_label.grid(row=5, column=0, columnspan=4, sticky=tk.W, pady=5)
+        status_label = ttk.Label(main_frame, textvariable=self.status_var, wraplength=600)
+        status_label.grid(row=4, column=0, columnspan=4, sticky=tk.W, pady=5)
         
         # Progress bar
-        self.progress = ttk.Progressbar(main_frame, length=400, mode='indeterminate')
-        self.progress.grid(row=6, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
+        self.progress = ttk.Progressbar(main_frame, length=600, mode='indeterminate')
+        self.progress.grid(row=5, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=5)
+
+    def set_quick_time(self, seconds):
+        end = datetime.now()
+        start = end.fromtimestamp(end.timestamp() - seconds)
+        self.start_time.set_date(start)
+        self.end_time.set_date(end)
 
     def browse_path(self):
         directory = filedialog.askdirectory(initialdir=self.output_path.get())
         if directory:
             self.output_path.set(directory)
 
-    def convert_to_seconds(self):
-        try:
-            value = float(self.time_value.get())
-            unit = self.time_unit.get()
-            
-            if unit == "minutes":
-                return value * 60
-            elif unit == "hours":
-                return value * 3600
-            return value
-        except ValueError:
-            messagebox.showerror("Error", "Please enter a valid number for time range")
-            return None
-
     def fetch_logs(self):
-        seconds = self.convert_to_seconds()
-        if seconds is None:
-            return
-
+        start_time = self.start_time.get_date().strftime('%Y-%m-%dT%H:%M:%S')
+        end_time = self.end_time.get_date().strftime('%Y-%m-%dT%H:%M:%S')
+        
         output_file = os.path.join(
             self.output_path.get(), 
             f"sysmon_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -102,10 +115,10 @@ class SysmonLogGUI:
 
         # Construct PowerShell command
         ps_command = (
-            f'Get-WinEvent '
-            f'-FilterHashTable @{{ LogName = "Microsoft-Windows-Sysmon/Operational";'
-            f'StartTime = (Get-Date).AddSeconds(-{seconds});'
-            f'EndTime = (Get-Date) }} | Export-Csv -Path "{output_file}" -NoTypeInformation'
+            f'Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" '
+            f'-FilterHashTable @{{LogName="Microsoft-Windows-Sysmon/Operational";'
+            f'StartTime="{start_time}";'
+            f'EndTime="{end_time}"}} | Export-Csv -Path "{output_file}" -NoTypeInformation'
         )
 
         self.status_var.set("Fetching logs...")
