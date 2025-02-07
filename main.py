@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from tkcalendar import DateTimeEntry
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 import ctypes
@@ -15,6 +14,31 @@ def is_admin():
 
 def run_as_admin():
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+
+class DateTimeSelector(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        
+        # Date entry (YYYY-MM-DD)
+        self.date_var = tk.StringVar(value=datetime.now().strftime('%Y-%m-%d'))
+        self.date_entry = ttk.Entry(self, textvariable=self.date_var, width=12)
+        self.date_entry.grid(row=0, column=0, padx=2)
+        
+        # Time entry (HH:MM:SS)
+        self.time_var = tk.StringVar(value=datetime.now().strftime('%H:%M:%S'))
+        self.time_entry = ttk.Entry(self, textvariable=self.time_var, width=10)
+        self.time_entry.grid(row=0, column=1, padx=2)
+
+    def get_datetime(self):
+        try:
+            return datetime.strptime(f"{self.date_var.get()} {self.time_var.get()}", 
+                                   '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            return None
+
+    def set_datetime(self, dt):
+        self.date_var.set(dt.strftime('%Y-%m-%d'))
+        self.time_var.set(dt.strftime('%H:%M:%S'))
 
 class SysmonLogGUI:
     def __init__(self, root):
@@ -36,17 +60,22 @@ class SysmonLogGUI:
         
         # Start time
         ttk.Label(time_frame, text="Start Time:").grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
-        self.start_time = DateTimeEntry(time_frame, width=25)
+        self.start_time = DateTimeSelector(time_frame)
         self.start_time.grid(row=0, column=1, sticky=tk.W, pady=5, padx=5)
         
         # End time
         ttk.Label(time_frame, text="End Time:").grid(row=0, column=2, sticky=tk.W, pady=5, padx=5)
-        self.end_time = DateTimeEntry(time_frame, width=25)
+        self.end_time = DateTimeSelector(time_frame)
         self.end_time.grid(row=0, column=3, sticky=tk.W, pady=5, padx=5)
+
+        # Format hint
+        hint_text = "Format: YYYY-MM-DD HH:MM:SS"
+        ttk.Label(time_frame, text=hint_text, font=('', 8)).grid(
+            row=1, column=0, columnspan=4, sticky=tk.W, padx=5)
         
         # Quick time buttons
         quick_frame = ttk.Frame(time_frame)
-        quick_frame.grid(row=1, column=0, columnspan=4, pady=5)
+        quick_frame.grid(row=2, column=0, columnspan=4, pady=5)
         
         quick_times = [
             ("Last Hour", 3600),
@@ -95,18 +124,35 @@ class SysmonLogGUI:
 
     def set_quick_time(self, seconds):
         end = datetime.now()
-        start = end.fromtimestamp(end.timestamp() - seconds)
-        self.start_time.set_date(start)
-        self.end_time.set_date(end)
+        start = end - timedelta(seconds=seconds)
+        self.start_time.set_datetime(start)
+        self.end_time.set_datetime(end)
 
     def browse_path(self):
         directory = filedialog.askdirectory(initialdir=self.output_path.get())
         if directory:
             self.output_path.set(directory)
 
+    def validate_times(self):
+        start = self.start_time.get_datetime()
+        end = self.end_time.get_datetime()
+        
+        if not start or not end:
+            messagebox.showerror("Error", "Invalid date/time format.\nUse: YYYY-MM-DD HH:MM:SS")
+            return False
+            
+        if start > end:
+            messagebox.showerror("Error", "Start time must be before end time")
+            return False
+            
+        return True
+
     def fetch_logs(self):
-        start_time = self.start_time.get_date().strftime('%Y-%m-%dT%H:%M:%S')
-        end_time = self.end_time.get_date().strftime('%Y-%m-%dT%H:%M:%S')
+        if not self.validate_times():
+            return
+            
+        start_time = self.start_time.get_datetime().strftime('%Y-%m-%dT%H:%M:%S')
+        end_time = self.end_time.get_datetime().strftime('%Y-%m-%dT%H:%M:%S')
         
         output_file = os.path.join(
             self.output_path.get(), 
