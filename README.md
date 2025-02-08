@@ -56,26 +56,27 @@ Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -FilterHashTable @{
 
 ```bash
 <Sysmon schemaversion="4.70">
- <EventFiltering>
-   <RuleGroup name="Privilege Elevation Detection">
-     <ProcessCreate onmatch="include">
-       <IntegrityLevel>High</IntegrityLevel>
-       <ParentImage condition="is not">C:\Windows\System32\consent.exe</ParentImage>
-     </ProcessCreate>
-   </RuleGroup>
-   <RuleGroup name="Token Access">  
-     <ProcessAccess onmatch="include">
-       <GrantedAccess>0x1F0FFF|0x1F1FFF|0x1F2FFF</GrantedAccess>
-     </ProcessAccess>
-   </RuleGroup>
-   <RuleGroup name="Registry Monitoring">
-     <RegistryEvent onmatch="include">
-       <TargetObject condition="contains">Software\Classes\ms-settings\shell\open</TargetObject>
-       <TargetObject condition="contains">Software\Classes\Folder\shell\open</TargetObject>
-       <TargetObject condition="contains">Software\Microsoft\Windows\CurrentVersion\Run</TargetObject>
-       <TargetObject condition="contains">Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags</TargetObject>
-     </RegistryEvent>
-   </RuleGroup>
- </EventFiltering>
+  <EventFiltering>
+    <RuleGroup name="Privilege Elevation Detection" groupRelation="or">
+      <!-- Process Creation with elevated privileges -->
+      <ProcessCreate onmatch="include">
+        <IntegrityLevel>High</IntegrityLevel>
+        <ParentImage condition="is not">C:\Windows\System32\consent.exe</ParentImage>
+      </ProcessCreate>
+
+      <!-- Token Manipulation -->
+      <ProcessAccess onmatch="include">
+        <GrantedAccess>0x1F0FFF|0x1F1FFF|0x1F2FFF</GrantedAccess>
+      </ProcessAccess>
+
+      <!-- Registry auto-elevation paths -->
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">Software\Classes\ms-settings\shell\open</TargetObject>
+        <TargetObject condition="contains">Software\Classes\Folder\shell\open</TargetObject>
+        <TargetObject condition="contains">Software\Microsoft\Windows\CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+  </EventFiltering>
 </Sysmon>
 ```
